@@ -7,8 +7,8 @@ API REST de autenticación de dos factores: el usuario inicia sesión con correo
 | Integrante | Código | Responsabilidad |
 |---|---|---|
 | Cantillo Carolina | 20231153656 | Perfil de usuario (`routes/users.py`), pruebas (`tests/`) y documentación (README) |
-| Castro Edier | 202311254074 | API y datos: base del proyecto, rutas de autenticación (`routes/auth.py`) y despliegue |
-| Conde José | 202321256268 | Seguridad: hash de contraseñas, JWT (`security.py`) y middleware de autenticación |
+| Castro Edier | 202311254074 | Base del proyecto (`config.py`, `database.py`, `models.py`, `schemas.py`, `main.py`, `limiter.py`) y despliegue en Render |
+| Conde José | 202321256268 | Seguridad y autenticación: hash de contraseñas y JWT (`security.py`), middleware (`middleware.py`) y rutas de autenticación (`routes/auth.py`) |
 | Vega José | 202321256198 | Servicios de OTP y correo (`otp_service.py`, `email_service.py`) |
 
 **Cada integrante sustenta individualmente su parte.** Las contribuciones de cada uno quedan registradas en el historial de commits de Git.
