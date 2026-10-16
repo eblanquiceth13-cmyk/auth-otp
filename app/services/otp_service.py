@@ -45,21 +45,37 @@ def verify_otp(db: Session, user: User, code: str) -> bool:
     Verifica el código del usuario: debe existir, no estar usado ni expirado y coincidir.
     Si es válido lo marca como usado, así no se puede reutilizar.
     """
+    if not isinstance(code, str) or len(code) != 6 or not code.isascii() or not code.isdigit():
+        return False
     otp = (
         db.query(OTPCode)
         .filter(OTPCode.user_id == user.id, OTPCode.used.is_(False))
         .order_by(OTPCode.id.desc())
         .first()
     )
-    if otp is None or otp.expires_at < utcnow():
+    if otp is None or otp.expires_at <= utcnow():
         return False
     # compare_digest compara en tiempo constante (evita ataques de tiempo)
     if not secrets.compare_digest(otp.code, code):
         return False
 
-    otp.used = True
-    db.commit()
-    return True
+    # La lectura no reserva el OTP: solo una actualización puede consumirlo.
+    try:
+        changed = db.query(OTPCode).filter(
+            OTPCode.id == otp.id,
+            OTPCode.user_id == user.id,
+            OTPCode.code == code,
+            OTPCode.used.is_(False),
+            OTPCode.expires_at > utcnow(),
+        ).update({OTPCode.used: True}, synchronize_session="fetch")
+        if changed != 1:
+            db.rollback()
+            return False
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        raise
 
 
 def create_and_send_otp(db: Session, user: User) -> None:

@@ -9,9 +9,11 @@ from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
 from app.middleware import get_current_session, unauthorized
-from app.models import LoginSession, User, utcnow
+from app.models import LoginSession, OTPCode, User, utcnow
 from app.schemas import (
     MessageResponse,
+    OTPResend,
+    OTPVerify,
     TokenResponse,
     UserLogin,
     UserRegister,
@@ -142,3 +144,58 @@ def logout(
         db.rollback()
         raise
     return MessageResponse(message="Sesión cerrada correctamente")
+
+
+@router.post("/verify-otp", response_model=TokenResponse)
+@limiter.limit("5/minute")
+def verify_otp_endpoint(
+    request: Request,
+    data: OTPVerify,
+    db: Session = Depends(get_db),
+):
+    """Consume el OTP una sola vez y guarda la sesión antes de devolver el JWT."""
+    from app.services.otp_service import verify_otp
+
+    user = db.query(User).filter(User.email == str(data.email)).first()
+    if user is None or not verify_otp(db, user, data.code):
+        raise HTTPException(status_code=401, detail="Código OTP inválido o expirado")
+
+    token, expires_at = create_access_token(user.id)
+    try:
+        db.add(LoginSession(user_id=user.id, token=token, expires_at=expires_at))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+@router.post("/resend-otp", response_model=MessageResponse)
+@limiter.limit("5/minute")
+def resend_otp_endpoint(
+    request: Request,
+    data: OTPResend,
+    db: Session = Depends(get_db),
+):
+    """Reenvía solo para un login pendiente e invalida el código anterior."""
+    from app.services.otp_service import create_and_send_otp
+
+    message = MessageResponse(
+        message="Si existe un inicio de sesión pendiente, recibirás un nuevo código"
+    )
+    user = db.query(User).filter(User.email == str(data.email)).first()
+    if user is None:
+        return message
+    pending = db.query(OTPCode).filter(
+        OTPCode.user_id == user.id,
+        OTPCode.used.is_(False),
+        OTPCode.expires_at > utcnow(),
+    ).first()
+    if pending is None:
+        return message
+    create_and_send_otp(db, user)
+    return message
