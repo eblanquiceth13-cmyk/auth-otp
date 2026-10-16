@@ -41,7 +41,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Error interno del servidor"})
 
 
-@app.api_route("/", methods=["GET", "HEAD"], tags=["Estado"])
+@app.get("/", tags=["Estado"])
+@app.head("/", include_in_schema=False)
 def health_check():
     """Verifica que la API está en línea (útil para el despliegue)."""
     return {"status": "ok"}
