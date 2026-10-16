@@ -46,7 +46,7 @@ API REST de autenticación de dos factores: el usuario inicia sesión con correo
 - `app/routes/users.py`: endpoints de perfil.
 - `app/services/otp_service.py`: generación y validación de OTP.
 - `app/services/email_service.py`: envío de correos.
-- `tests/`: pruebas unitarias y de integración (`conftest.py`, `test_unit.py`, `test_integration.py`).
+- `tests/`: pruebas unitarias y de integración (conftest.py, test_unit.py, test_integration.py, test_otp_flow.py, test_otp_service.py).
 - `requirements.txt`: dependencias del proyecto.
 - `.env.example`: plantilla de variables de entorno.
 
